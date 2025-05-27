@@ -3,6 +3,7 @@ import json
 import gspread
 import os
 import base64
+from datetime import datetime, timedelta
 from oauth2client.service_account import ServiceAccountCredentials
 
 # === 環境変数から取得 ===
@@ -36,43 +37,49 @@ delegated_creds = creds.create_delegated(IMPERSONATE_USER)
 client = gspread.authorize(delegated_creds)
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
-# === 既存の日付＋広告IDを組み合わせたキーを取得しておく（重複防止）
-existing = sheet.get_all_values()[1:]  # 先頭行はヘッダー
+# === 既存のキー（date + ad_id）を取得 ===
+existing = sheet.get_all_values()[1:]  # ヘッダーを除く
 existing_keys = set(f"{r[0]}_{r[18]}" for r in existing if len(r) > 18)
 
-# === 5/1〜5/27 の一括取得 ===
-params = {
-    'fields': ','.join([
-        'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
-        'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
-        'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
-        'actions', 'cost_per_action_type'
-    ]),
-    'level': 'ad',
-    'time_range[since]': '2025-05-01',
-    'time_range[until]': '2025-05-27',
-    'limit': 100,
-    'access_token': ACCESS_TOKEN
-}
+# === 日別ループ（5/1〜5/27） ===
+start_date = datetime.strptime("2025-05-01", "%Y-%m-%d")
+end_date = datetime.strptime("2025-05-27", "%Y-%m-%d")
 
-def get_action_value(arr, action_type):
-    if not arr:
-        return 0
-    for a in arr:
-        if a.get('action_type') == action_type:
-            return float(a.get('value', 0))
-    return 0
+while start_date <= end_date:
+    date_str = start_date.strftime('%Y-%m-%d')
+    print(f"📅 Fetching {date_str}...")
 
-while True:
+    params = {
+        'fields': ','.join([
+            'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
+            'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
+            'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
+            'actions', 'cost_per_action_type'
+        ]),
+        'level': 'ad',
+        'time_range[since]': date_str,
+        'time_range[until]': date_str,
+        'limit': 100,
+        'access_token': ACCESS_TOKEN
+    }
+
     res = requests.get(f"https://graph.facebook.com/v18.0/{AD_ACCOUNT_ID}/insights", params=params)
     data = res.json()
 
-    print("API CALL URL:", res.url)
     if "error" in data:
         print("❌ API Error:", data["error"])
-        exit(1)
+        start_date += timedelta(days=1)
+        continue
 
     buffer = []
+
+    def get_action_value(arr, action_type):
+        if not arr:
+            return 0
+        for a in arr:
+            if a.get('action_type') == action_type:
+                return float(a.get('value', 0))
+        return 0
 
     for row in data.get('data', []):
         video_total = get_action_value(row.get('video_play_actions'), 'video_view')
@@ -95,13 +102,13 @@ while True:
             float(row.get('frequency', 0)),
             float(row.get('cpm', 0)),
             int(row.get('inline_link_clicks', 0)),
-            0,  # 3秒再生率（取得不可）
+            0,
             get_action_value(row.get('actions'), 'offsite_conversion.fb_pixel_custom'),
             get_action_value(row.get('cost_per_action_type'), 'offsite_conversion.fb_pixel_custom'),
             row.get('campaign_id', ''),
             row.get('adset_id', ''),
             row.get('ad_id', ''),
-            0, 0, 0, 0, 0,  # 25〜100%再生率（取得不可）
+            0, 0, 0, 0, 0,
             float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0,
             get_action_value(row.get('actions'), 'landing_page_view')
         ]
@@ -110,12 +117,10 @@ while True:
 
     if buffer:
         sheet.append_rows(buffer)
-        print(f"✅ 一括書き込み {len(buffer)} 行完了")
-
-    if 'paging' in data and 'next' in data['paging']:
-        url = data['paging']['next']
-        params = {}  # 次ページURLにクエリが含まれている
+        print(f"✅ {date_str}: {len(buffer)} 行を一括書き込み")
     else:
-        break
+        print(f"ℹ️ {date_str}: データなし or 全て重複")
 
-print("🎉 5/1〜5/27のデータ取得完了！")
+    start_date += timedelta(days=1)
+
+print("🎉 5/1〜5/27の日別データ取得完了！")
