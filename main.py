@@ -1,24 +1,24 @@
 import requests
 import json
 import gspread
+import os
+import base64
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 
-# === 環境変数またはSecretsから取得 ===
-ACCESS_TOKEN = "EAAMIqzU3ZCCEBOwRfIZCCMCqjelbYjcWk1fXI6OnA1jZAmylczkZB07KcKGceLA9LB9zZAcujZA1PMwFqNLStOPbZBRAsPLixj6mIcEtAiU6P9XuZCdkZCn5zfjrMEnIfIyhlDw5GeC583FhwwE82WKKOZBlUt9ZAXXeMBIRQuxiGW79NQyZCJEPp4k5ECXv"
+# === 環境変数から取得 ===
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 SPREADSHEET_ID = "1Jrgz4T7pEisKl9sIBNNBBy8ZDPTWOBBJOZJhFVvkitE"
 SHEET_NAME = "広告report"
 AD_ACCOUNT_ID = "act_2830099530543264"
+IMPERSONATE_USER = "m.ogasahara@proreach.co.jp"  # あなたのG Workspaceユーザー
 
-# === 日付の取得 ===
-yesterday = (datetime.utcnow() + timedelta(hours=9)) - timedelta(days=1)
-date_str = yesterday.strftime('%Y-%m-%d')
+# === credentials.json をSecretsから生成 ===
+with open("credentials.json", "wb") as f:
+    f.write(base64.b64decode(os.getenv("GSHEET_JSON_BASE64")))
 
-# === スプレッドシート認証（なりすまし含む） ===
-import json
-
+# === スプレッドシート認証（なりすまし含む）===
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-IMPERSONATE_USER = "m.ogasahara@proreach.co.jp"  # ← あなたのGoogle Workspaceユーザー
 
 with open('credentials.json') as f:
     creds_data = json.load(f)
@@ -29,6 +29,9 @@ delegated_creds = creds.create_delegated(IMPERSONATE_USER)
 client = gspread.authorize(delegated_creds)
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
+# === 日付の取得 ===
+yesterday = (datetime.utcnow() + timedelta(hours=9)) - timedelta(days=1)
+date_str = yesterday.strftime('%Y-%m-%d')
 
 # === 既存の日付チェック ===
 existing_dates = sheet.col_values(1)[1:]  # skip header
@@ -59,14 +62,6 @@ def get_action_value(arr, action_type):
         return 0
     for a in arr:
         if a.get('action_type') == action_type:
-            return float(a.get('value', 0))
-    return 0
-
-def get_video_value(arr, key):
-    if not arr:
-        return 0
-    for a in arr:
-        if a.get('action_type') == key:
             return float(a.get('value', 0))
     return 0
 
@@ -110,10 +105,9 @@ while True:
 
         sheet.append_row(row_data)
 
-    # 次ページがあれば更新
     if 'paging' in data and 'next' in data['paging']:
         url = data['paging']['next']
-        params = {}  # nextにはすでにパラメータが含まれている
+        params = {}  # nextにはパラメータが含まれてる
     else:
         break
 
