@@ -16,7 +16,7 @@ IMPERSONATE_USER = "m.ogasahara@proreach.co.jp"
 # === credentials.json をSecretsから生成 ===
 gsheet_base64 = os.getenv("GSHEET_JSON_BASE64")
 
-print("🔍 ENV CHECK")
+print("\U0001f50d ENV CHECK")
 print("GSHEET_JSON_BASE64 is None:", gsheet_base64 is None)
 print("ACCESS_TOKEN is None:", ACCESS_TOKEN is None)
 
@@ -29,7 +29,7 @@ with open("credentials.json", "wb") as f:
 
 with open("credentials.json", "r") as f:
     first_line = f.readline()
-    print("📄 credentials.json 先頭:", first_line.strip())
+    print("\ud83d\udcc4 credentials.json 先頭:", first_line.strip())
 
 # === スプレッドシート認証 ===
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -43,7 +43,7 @@ sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
 # === 特定日付で取得（今回は5/27で固定） ===
 date_str = "2025-05-27"
-print("📅 取得対象日:", date_str)
+print("\ud83d\udcc5 取得対象日:", date_str)
 
 # === 既存チェック（1列目の日付） ===
 existing_dates = sheet.col_values(1)[1:]  # skip header
@@ -57,9 +57,7 @@ params = {
     'fields': ','.join([
         'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
         'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
-        'inline_link_clicks', 'video_play_actions', 'video_3_sec_watched_actions',
-        'video_25_watched_actions', 'video_50_watched_actions', 'video_75_watched_actions',
-        'video_95_watched_actions', 'video_100_watched_actions', 'video_avg_time_watched_actions',
+        'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
         'actions', 'cost_per_action_type'
     ]),
     'level': 'ad',
@@ -81,13 +79,11 @@ while True:
     res = requests.get(url, params=params)
     data = res.json()
 
-    print("📡 API URL:", res.url)
-    print("📊 API RAW RESPONSE:", json.dumps(data, indent=2))
+    print("\ud83d\udec1 API URL:", res.url)
+    print("\ud83d\udcca API RAW RESPONSE:", json.dumps(data, indent=2))
 
     for row in data.get('data', []):
         video_total = get_action_value(row.get('video_play_actions'), 'video_view')
-        video_3s = get_action_value(row.get('video_3_sec_watched_actions'), 'video_view')
-        three_sec_rate = round(video_3s / video_total, 3) if video_total else 0
 
         row_data = [
             row.get('date_start', ''),
@@ -103,17 +99,13 @@ while True:
             float(row.get('frequency', 0)),
             float(row.get('cpm', 0)),
             int(row.get('inline_link_clicks', 0)),
-            three_sec_rate,
+            0,  # ← 3秒再生率（除外）
             get_action_value(row.get('actions'), 'offsite_conversion.fb_pixel_custom'),
             get_action_value(row.get('cost_per_action_type'), 'offsite_conversion.fb_pixel_custom'),
             row.get('campaign_id', ''),
             row.get('adset_id', ''),
             row.get('ad_id', ''),
-            round(get_action_value(row.get('video_25_watched_actions'), 'video_view') / video_total, 3) if video_total else 0,
-            round(get_action_value(row.get('video_50_watched_actions'), 'video_view') / video_total, 3) if video_total else 0,
-            round(get_action_value(row.get('video_75_watched_actions'), 'video_view') / video_total, 3) if video_total else 0,
-            round(get_action_value(row.get('video_95_watched_actions'), 'video_view') / video_total, 3) if video_total else 0,
-            round(get_action_value(row.get('video_100_watched_actions'), 'video_view') / video_total, 3) if video_total else 0,
+            0, 0, 0, 0, 0,  # ← 25〜100%再生率（除外）
             float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0,
             get_action_value(row.get('actions'), 'landing_page_view')
         ]
@@ -127,4 +119,4 @@ while True:
     else:
         break
 
-print("🎉 完了しました")
+print("\ud83c\udf89 完了しました")
