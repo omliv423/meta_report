@@ -72,6 +72,8 @@ while True:
         print("❌ API Error:", data["error"])
         exit(1)
 
+    buffer = []
+
     for row in data.get('data', []):
         video_total = get_action_value(row.get('video_play_actions'), 'video_view')
         key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
@@ -93,19 +95,22 @@ while True:
             float(row.get('frequency', 0)),
             float(row.get('cpm', 0)),
             int(row.get('inline_link_clicks', 0)),
-            0,  # ← 3秒再生率（取得不可のため0で固定）
+            0,  # 3秒再生率（取得不可）
             get_action_value(row.get('actions'), 'offsite_conversion.fb_pixel_custom'),
             get_action_value(row.get('cost_per_action_type'), 'offsite_conversion.fb_pixel_custom'),
             row.get('campaign_id', ''),
             row.get('adset_id', ''),
             row.get('ad_id', ''),
-            0, 0, 0, 0, 0,  # ← 25〜100%再生率（取得不可）
+            0, 0, 0, 0, 0,  # 25〜100%再生率（取得不可）
             float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0,
             get_action_value(row.get('actions'), 'landing_page_view')
         ]
 
-        print("✅ 追記:", key)
-        sheet.append_row(row_data)
+        buffer.append(row_data)
+
+    if buffer:
+        sheet.append_rows(buffer)
+        print(f"✅ 一括書き込み {len(buffer)} 行完了")
 
     if 'paging' in data and 'next' in data['paging']:
         url = data['paging']['next']
