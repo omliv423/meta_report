@@ -7,15 +7,28 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 
 # === 環境変数から取得 ===
-ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
-SPREADSHEET_ID = "1Jrgz4T7pEisKl9sIBNNBBy8ZDPTWOBBJOZJhFVvkitE"
-SHEET_NAME = "広告report"
-AD_ACCOUNT_ID = "act_2830099530543264"
-IMPERSONATE_USER = "m.ogasahara@proreach.co.jp"  # あなたのG Workspaceユーザー
-
 # === credentials.json をSecretsから生成 ===
+gsheet_base64 = os.getenv("GSHEET_JSON_BASE64")
+access_token = os.getenv("ACCESS_TOKEN")
+
+# Debugログ出力
+print("🔍 ENV CHECK")
+print("GSHEET_JSON_BASE64 is None:", gsheet_base64 is None)
+print("ACCESS_TOKEN is None:", access_token is None)
+
+if gsheet_base64 is None or access_token is None:
+    print("❌ 環境変数が見つかりません。Secretsを確認してください。")
+    exit(1)
+
 with open("credentials.json", "wb") as f:
-    f.write(base64.b64decode(os.getenv("GSHEET_JSON_BASE64")))
+    f.write(base64.b64decode(gsheet_base64))
+
+# credentials.jsonの中身を確認（1行目だけ）
+with open("credentials.json", "r") as f:
+    first_line = f.readline()
+    print("📄 credentials.json 先頭:", first_line.strip())
+
+# その後に json.load や認証処理が続きます
 
 # === スプレッドシート認証（なりすまし含む）===
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
