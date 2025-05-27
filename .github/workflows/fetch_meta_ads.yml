@@ -29,5 +29,6 @@ jobs:
       - name: Run main script
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          GSHEET_JSON_BASE64: ${{ secrets.GSHEET_JSON_BASE64 }}
         run: |
           python main.py
