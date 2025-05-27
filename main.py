@@ -29,7 +29,7 @@ with open("credentials.json", "wb") as f:
 
 with open("credentials.json", "r") as f:
     first_line = f.readline()
-    print("\ud83d\udcc4 credentials.json 先頭:", first_line.strip())
+    print("credentials.json 先頭:", first_line.strip())
 
 # === スプレッドシート認証 ===
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -43,7 +43,7 @@ sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
 # === 特定日付で取得（今回は5/27で固定） ===
 date_str = "2025-05-27"
-print("\ud83d\udcc5 取得対象日:", date_str)
+print("取得対象日:", date_str)
 
 # === 既存チェック（1列目の日付） ===
 existing_dates = sheet.col_values(1)[1:]  # skip header
@@ -79,8 +79,8 @@ while True:
     res = requests.get(url, params=params)
     data = res.json()
 
-    print("\ud83d\udec1 API URL:", res.url)
-    print("\ud83d\udcca API RAW RESPONSE:", json.dumps(data, indent=2))
+    print("API URL:", res.url)
+    print("API RAW RESPONSE:", json.dumps(data, indent=2))
 
     for row in data.get('data', []):
         video_total = get_action_value(row.get('video_play_actions'), 'video_view')
@@ -119,4 +119,4 @@ while True:
     else:
         break
 
-print("\ud83c\udf89 完了しました")
+print("完了しました")
