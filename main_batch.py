@@ -35,7 +35,7 @@ sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 existing = sheet.get_all_values()[1:]
 existing_keys = set(f"{r[0]}_{r[18]}" for r in existing if len(r) > 18)
 
-start_date = datetime.strptime("2025-05-01", "%Y-%m-%d")
+start_date = datetime.strptime("2024-02-01", "%Y-%m-%d")
 end_date = datetime.strptime("2025-05-27", "%Y-%m-%d")
 
 def get_first_value(arr):
