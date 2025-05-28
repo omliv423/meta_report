@@ -104,11 +104,11 @@ while start_date <= end_date:
             int(row.get('clicks', 0)),
             int(row.get('inline_link_clicks', 0)),  
             float(row.get('cpc', 0)),     
-            get_action_value(row.get('actions'), 'landing_page_view')          
+            get_action_value(row.get('actions'), 'landing_page_view'),          
             row.get('campaign_id', ''),
             row.get('adset_id', ''),
             row.get('ad_id', ''),
-            float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0,
+            float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0
         ]
 
         buffer.append(row_data)
