@@ -50,7 +50,7 @@ existing_keys = set(f"{r[0]}_{r[18]}" for r in existing if len(r) > 18)
 params = {
     'fields': ','.join([
         'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
-        'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
+        'clicks', 'impressions', 'spend', 'cpc', 'reach', 'frequency', 'cpm',
         'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
         'video_p25_watched_actions', 'video_p50_watched_actions',
         'video_p75_watched_actions', 'video_p95_watched_actions',
@@ -107,7 +107,6 @@ for row in data.get('data', []):
         float(row.get('frequency', 0)),
         int(row.get('impressions', 0)),
         float(row.get('cpm', 0)),
-        float(row.get('ctr', 0)),
         int(row.get('clicks', 0)),
         int(row.get('inline_link_clicks', 0)),
         float(row.get('cpc', 0)),
