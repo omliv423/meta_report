@@ -52,7 +52,9 @@ params = {
         'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
         'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
         'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
-        'actions', 'cost_per_action_type'
+        'video_p25_watched_actions', 'video_p50_watched_actions',
+        'video_p75_watched_actions', 'video_p95_watched_actions',
+        'video_p100_watched_actions'
     ]),
     'level': 'ad',
     'time_range[since]': date_str,
@@ -68,22 +70,32 @@ if "error" in data:
     print("❌ API Error:", data["error"])
     exit(1)
 
-buffer = []
-
-def get_action_value(arr, action_type):
-    if not arr:
-        return 0
-    for a in arr:
-        if a.get('action_type') == action_type:
-            return float(a.get('value', 0))
+def get_first_value(arr):
+    if isinstance(arr, list) and len(arr) > 0:
+        return float(arr[0].get("value", 0))
     return 0
 
+def get_ratio(numerator_arr, denominator_arr):
+    num = get_first_value(numerator_arr)
+    den = get_first_value(denominator_arr)
+    return round(num / den, 4) if den else 0
+
+buffer = []
+
 for row in data.get('data', []):
-    video_total = get_action_value(row.get('video_play_actions'), 'video_view')
+    if int(row.get('impressions', 0)) == 0:
+        continue  # ⏭ 配信されていない広告はスキップ
+
     key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
     if key in existing_keys:
         print("⏭ Skip (already exists):", key)
         continue
+
+    v25 = get_ratio(row.get('video_p25_watched_actions'), row.get('video_play_actions'))
+    v50 = get_ratio(row.get('video_p50_watched_actions'), row.get('video_play_actions'))
+    v75 = get_ratio(row.get('video_p75_watched_actions'), row.get('video_play_actions'))
+    v95 = get_ratio(row.get('video_p95_watched_actions'), row.get('video_play_actions'))
+    v100 = get_ratio(row.get('video_p100_watched_actions'), row.get('video_play_actions'))
 
     row_data = [
         row.get('date_start', ''),
@@ -91,21 +103,19 @@ for row in data.get('data', []):
         row.get('adset_name', ''),
         row.get('ad_name', ''),
         float(row.get('spend', 0)),
-        get_action_value(row.get('actions'), 'offsite_conversion.fb_pixel_custom'),
-        get_action_value(row.get('cost_per_action_type'), 'offsite_conversion.fb_pixel_custom'),   
         int(row.get('reach', 0)),
-        float(row.get('frequency', 0)),          
+        float(row.get('frequency', 0)),
         int(row.get('impressions', 0)),
         float(row.get('cpm', 0)),
         float(row.get('ctr', 0)),
         int(row.get('clicks', 0)),
-        int(row.get('inline_link_clicks', 0)),  
-        float(row.get('cpc', 0)),     
-        get_action_value(row.get('actions'), 'landing_page_view'),         
+        int(row.get('inline_link_clicks', 0)),
+        float(row.get('cpc', 0)),
+        get_first_value(row.get('video_avg_time_watched_actions')),
+        v25, v50, v75, v95, v100,
         row.get('campaign_id', ''),
         row.get('adset_id', ''),
-        row.get('ad_id', ''),
-        float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0,
+        row.get('ad_id', '')
     ]
 
     buffer.append(row_data)
