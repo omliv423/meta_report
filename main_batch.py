@@ -71,46 +71,50 @@ while start_date <= end_date:
         return float(arr[0].get('value', 0)) if arr else 0
 
     for row in data.get('data', []):
-        key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
-        if key in existing_keys:
-            print("⏭ Skip (already exists):", key)
-            continue
+    if int(row.get('impressions', 0)) == 0:
+        continue  # ⏭ インプレッション0の広告は除外
 
-        v25 = get_first_value(row.get('video_p25_watched_actions'))
-        v50 = get_first_value(row.get('video_p50_watched_actions'))
-        v75 = get_first_value(row.get('video_p75_watched_actions'))
-        v95 = get_first_value(row.get('video_p95_watched_actions'))
-        v100 = get_first_value(row.get('video_p100_watched_actions'))
+    key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
+    if key in existing_keys:
+        print("⏭ Skip (already exists):", key)
+        continue
 
-        results = row.get('conversions') or row.get('objective_results')
-        result_count = get_first_value(results)
-        spend = float(row.get('spend', 0))
-        cost_per_result = spend / result_count if result_count else 0
+    v25 = get_first_value(row.get('video_p25_watched_actions'))
+    v50 = get_first_value(row.get('video_p50_watched_actions'))
+    v75 = get_first_value(row.get('video_p75_watched_actions'))
+    v95 = get_first_value(row.get('video_p95_watched_actions'))
+    v100 = get_first_value(row.get('video_p100_watched_actions'))
 
-        row_data = [
-            row.get('date_start', ''),
-            row.get('campaign_name', ''),
-            row.get('adset_name', ''),
-            row.get('ad_name', ''),
-            spend,
-            result_count,
-            cost_per_result,
-            int(row.get('reach', 0)),
-            float(row.get('frequency', 0)),
-            int(row.get('impressions', 0)),
-            float(row.get('cpm', 0)),
-            float(row.get('ctr', 0)),
-            int(row.get('clicks', 0)),
-            int(row.get('inline_link_clicks', 0)),
-            float(row.get('cpc', 0)),
-            v25, v50, v75, v95, v100,
-            row.get('campaign_id', ''),
-            row.get('adset_id', ''),
-            row.get('ad_id', ''),
-            get_first_value(row.get('video_avg_time_watched_actions'))
-        ]
+    results = row.get('conversions') or row.get('objective_results')
+    result_count = get_first_value(results)
+    spend = float(row.get('spend', 0))
+    cost_per_result = spend / result_count if result_count else 0
 
-        buffer.append(row_data)
+    row_data = [
+        row.get('date_start', ''),
+        row.get('campaign_name', ''),
+        row.get('adset_name', ''),
+        row.get('ad_name', ''),
+        spend,
+        result_count,
+        cost_per_result,
+        int(row.get('reach', 0)),
+        float(row.get('frequency', 0)),
+        int(row.get('impressions', 0)),
+        float(row.get('cpm', 0)),
+        float(row.get('ctr', 0)),
+        int(row.get('clicks', 0)),
+        int(row.get('inline_link_clicks', 0)),
+        float(row.get('cpc', 0)),
+        v25, v50, v75, v95, v100,
+        row.get('campaign_id', ''),
+        row.get('adset_id', ''),
+        row.get('ad_id', ''),
+        get_first_value(row.get('video_avg_time_watched_actions'))
+    ]
+
+    buffer.append(row_data)
+
 
     if buffer:
         sheet.append_rows(buffer)
