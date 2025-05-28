@@ -106,11 +106,11 @@ while start_date <= end_date:
             int(row.get('clicks', 0)),
             int(row.get('inline_link_clicks', 0)),
             float(row.get('cpc', 0)),
+            get_first_value(row.get('video_avg_time_watched_actions')),
             v25, v50, v75, v95, v100,
             row.get('campaign_id', ''),
             row.get('adset_id', ''),
-            row.get('ad_id', ''),
-            get_first_value(row.get('video_avg_time_watched_actions'))
+            row.get('ad_id', '')
         ]
 
         buffer.append(row_data)
