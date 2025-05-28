@@ -38,12 +38,12 @@ client = gspread.authorize(delegated_creds)
 sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 
 # === 既存のキー（date + ad_id）を取得 ===
-existing = sheet.get_all_values()[1:]  # ヘッダーを除く
+existing = sheet.get_all_values()[1:]
 existing_keys = set(f"{r[0]}_{r[18]}" for r in existing if len(r) > 18)
 
-# === 日別ループ（2/1〜4/30） ===
-start_date = datetime.strptime("2024-02-01", "%Y-%m-%d")
-end_date = datetime.strptime("2025-04-30", "%Y-%m-%d")
+# === 日別ループ（5/1〜5/27） ===
+start_date = datetime.strptime("2025-05-01", "%Y-%m-%d")
+end_date = datetime.strptime("2025-05-27", "%Y-%m-%d")
 
 while start_date <= end_date:
     date_str = start_date.strftime('%Y-%m-%d')
@@ -51,10 +51,14 @@ while start_date <= end_date:
 
     params = {
         'fields': ','.join([
-            'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
-            'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
-            'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
-            'actions', 'cost_per_action_type'
+            'date_start', 'campaign_name', 'adset_name', 'ad_name',
+            'campaign_id', 'adset_id', 'ad_id', 'clicks', 'impressions',
+            'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
+            'inline_link_clicks', 'video_play_actions',
+            'video_avg_time_watched_actions',
+            'video_p25_watched_actions', 'video_p50_watched_actions',
+            'video_p75_watched_actions', 'video_p95_watched_actions',
+            'video_p100_watched_actions'
         ]),
         'level': 'ad',
         'time_range[since]': date_str,
@@ -82,33 +86,45 @@ while start_date <= end_date:
         return 0
 
     for row in data.get('data', []):
-        video_total = get_action_value(row.get('video_play_actions'), 'video_view')
+        video_total = get_action_value(row.get('video_play_actions'), 'video_view') or 1  # 0除算防止
         key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
         if key in existing_keys:
             print("⏭ Skip (already exists):", key)
             continue
+
+        results = get_action_value(row.get('video_play_actions'), 'video_view')
+        spend = float(row.get('spend', 0))
+        cv = results
+        cvr = (spend / results) if results else 0
+
+        def safe_div(numerator, denominator):
+            return round(numerator / denominator * 100, 2) if denominator else 0
 
         row_data = [
             row.get('date_start', ''),
             row.get('campaign_name', ''),
             row.get('adset_name', ''),
             row.get('ad_name', ''),
-            float(row.get('spend', 0)),
-            get_action_value(row.get('actions'), 'offsite_conversion.fb_pixel_custom'),
-            get_action_value(row.get('cost_per_action_type'), 'offsite_conversion.fb_pixel_custom'),   
+            spend,
+            results,
+            cvr,
             int(row.get('reach', 0)),
-            float(row.get('frequency', 0)),          
+            float(row.get('frequency', 0)),
             int(row.get('impressions', 0)),
             float(row.get('cpm', 0)),
             float(row.get('ctr', 0)),
             int(row.get('clicks', 0)),
-            int(row.get('inline_link_clicks', 0)),  
-            float(row.get('cpc', 0)),     
-            get_action_value(row.get('actions'), 'landing_page_view'),          
+            int(row.get('inline_link_clicks', 0)),
+            float(row.get('cpc', 0)),
             row.get('campaign_id', ''),
             row.get('adset_id', ''),
             row.get('ad_id', ''),
-            float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0
+            float(row.get('video_avg_time_watched_actions', [{}])[0].get('value', 0)) if row.get('video_avg_time_watched_actions') else 0,
+            safe_div(get_action_value(row.get('video_p25_watched_actions'), 'video_view'), video_total),
+            safe_div(get_action_value(row.get('video_p50_watched_actions'), 'video_view'), video_total),
+            safe_div(get_action_value(row.get('video_p75_watched_actions'), 'video_view'), video_total),
+            safe_div(get_action_value(row.get('video_p95_watched_actions'), 'video_view'), video_total),
+            safe_div(get_action_value(row.get('video_p100_watched_actions'), 'video_view'), video_total)
         ]
 
         buffer.append(row_data)
