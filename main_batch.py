@@ -72,7 +72,7 @@ while start_date <= end_date:
 
     for row in data.get('data', []):
     if int(row.get('impressions', 0)) == 0:
-        continue  # ⏭ インプレッション0の広告は除外
+        continue  # ⏭ 配信ゼロはスキップ
 
     key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
     if key in existing_keys:
@@ -114,6 +114,7 @@ while start_date <= end_date:
     ]
 
     buffer.append(row_data)
+
 
 
     if buffer:
