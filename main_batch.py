@@ -37,21 +37,18 @@ existing_keys = set(f"{r[0]}_{r[18]}" for r in existing if len(r) > 18)
 start_date = datetime.strptime("2025-05-01", "%Y-%m-%d")
 end_date = datetime.strptime("2025-05-27", "%Y-%m-%d")
 
-def get_first_value(arr):
-    return float(arr[0].get('value', 0)) if arr else 0
-
 while start_date <= end_date:
     date_str = start_date.strftime('%Y-%m-%d')
     print(f"📅 Fetching {date_str}...")
 
     params = {
         'fields': ','.join([
-            'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
+            'date_start', 'campaign_name', 'adset_name', 'ad_name',
+            'campaign_id', 'adset_id', 'ad_id',
             'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
             'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
             'video_p25_watched_actions', 'video_p50_watched_actions', 'video_p75_watched_actions',
-            'video_p95_watched_actions', 'video_p100_watched_actions',
-            'conversions', 'objective', 'objective_results'
+            'video_p95_watched_actions', 'video_p100_watched_actions'
         ]),
         'level': 'ad',
         'time_range[since]': date_str,
@@ -70,9 +67,12 @@ while start_date <= end_date:
 
     buffer = []
 
+    def get_first_value(arr):
+        return float(arr[0].get('value', 0)) if arr else 0
+
     for row in data.get('data', []):
         if int(row.get('impressions', 0)) == 0:
-            continue  # 配信されていない広告はスキップ
+            continue  # ⏭ インプレッション0の広告は除外
 
         key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
         if key in existing_keys:
@@ -84,11 +84,7 @@ while start_date <= end_date:
         v75 = get_first_value(row.get('video_p75_watched_actions'))
         v95 = get_first_value(row.get('video_p95_watched_actions'))
         v100 = get_first_value(row.get('video_p100_watched_actions'))
-
-        results = row.get('conversions') or row.get('objective_results')
-        result_count = get_first_value(results)
         spend = float(row.get('spend', 0))
-        cost_per_result = spend / result_count if result_count else 0
 
         row_data = [
             row.get('date_start', ''),
@@ -96,8 +92,6 @@ while start_date <= end_date:
             row.get('adset_name', ''),
             row.get('ad_name', ''),
             spend,
-            result_count,
-            cost_per_result,
             int(row.get('reach', 0)),
             float(row.get('frequency', 0)),
             int(row.get('impressions', 0)),
