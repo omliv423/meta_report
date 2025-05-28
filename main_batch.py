@@ -41,9 +41,9 @@ sheet = client.open_by_key(SPREADSHEET_ID).worksheet(SHEET_NAME)
 existing = sheet.get_all_values()[1:]  # ヘッダーを除く
 existing_keys = set(f"{r[0]}_{r[18]}" for r in existing if len(r) > 18)
 
-# === 日別ループ（5/1〜5/27） ===
-start_date = datetime.strptime("2025-05-01", "%Y-%m-%d")
-end_date = datetime.strptime("2025-05-27", "%Y-%m-%d")
+# === 日別ループ（2/1〜4/30） ===
+start_date = datetime.strptime("2024-02-01", "%Y-%m-%d")
+end_date = datetime.strptime("2025-04-30", "%Y-%m-%d")
 
 while start_date <= end_date:
     date_str = start_date.strftime('%Y-%m-%d')
