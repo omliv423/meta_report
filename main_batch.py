@@ -1,3 +1,4 @@
+
 import requests
 import json
 import gspread
@@ -37,14 +38,19 @@ existing_keys = set(f"{r[0]}_{r[18]}" for r in existing if len(r) > 18)
 start_date = datetime.strptime("2025-05-01", "%Y-%m-%d")
 end_date = datetime.strptime("2025-05-27", "%Y-%m-%d")
 
+def get_first_value(arr):
+    return float(arr[0].get('value', 0)) if arr else 0
+
+def safe_div(numerator, denominator):
+    return round(numerator / denominator, 4) if denominator else 0
+
 while start_date <= end_date:
     date_str = start_date.strftime('%Y-%m-%d')
     print(f"📅 Fetching {date_str}...")
 
     params = {
         'fields': ','.join([
-            'date_start', 'campaign_name', 'adset_name', 'ad_name',
-            'campaign_id', 'adset_id', 'ad_id',
+            'date_start', 'campaign_name', 'adset_name', 'ad_name', 'campaign_id', 'adset_id', 'ad_id',
             'clicks', 'impressions', 'spend', 'cpc', 'ctr', 'reach', 'frequency', 'cpm',
             'inline_link_clicks', 'video_play_actions', 'video_avg_time_watched_actions',
             'video_p25_watched_actions', 'video_p50_watched_actions', 'video_p75_watched_actions',
@@ -67,23 +73,23 @@ while start_date <= end_date:
 
     buffer = []
 
-    def get_first_value(arr):
-        return float(arr[0].get('value', 0)) if arr else 0
-
     for row in data.get('data', []):
         if int(row.get('impressions', 0)) == 0:
-            continue  # ⏭ インプレッション0の広告は除外
+            continue
 
         key = f"{row.get('date_start', '')}_{row.get('ad_id', '')}"
         if key in existing_keys:
             print("⏭ Skip (already exists):", key)
             continue
 
-        v25 = get_first_value(row.get('video_p25_watched_actions'))
-        v50 = get_first_value(row.get('video_p50_watched_actions'))
-        v75 = get_first_value(row.get('video_p75_watched_actions'))
-        v95 = get_first_value(row.get('video_p95_watched_actions'))
-        v100 = get_first_value(row.get('video_p100_watched_actions'))
+        play_count = get_first_value(row.get('video_play_actions'))
+
+        v25 = safe_div(get_first_value(row.get('video_p25_watched_actions')), play_count)
+        v50 = safe_div(get_first_value(row.get('video_p50_watched_actions')), play_count)
+        v75 = safe_div(get_first_value(row.get('video_p75_watched_actions')), play_count)
+        v95 = safe_div(get_first_value(row.get('video_p95_watched_actions')), play_count)
+        v100 = safe_div(get_first_value(row.get('video_p100_watched_actions')), play_count)
+
         spend = float(row.get('spend', 0))
 
         row_data = [
